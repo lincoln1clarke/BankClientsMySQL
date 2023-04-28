@@ -181,13 +181,16 @@ public class SampleController implements Initializable{
     	tmp.setMoney(Long.parseLong(moneyBox.getText()));;
     	tmp.setNetworth(Long.parseLong(networthBox.getText()));
     	tmp.setRiskLevel(riskLevelCBO.getValue());
+    	
+    	modifyOnSQL(establishedConnection(), tmp, ((clientsTable.getSelectionModel().getSelectedIndex())+1));
+    	
     	clientsTable.refresh();
     }
 
     @FXML
     void erase(ActionEvent event) {
     	Alert alert = new Alert(AlertType.CONFIRMATION);
-    	alert.setTitle("Restart?");
+    	alert.setTitle("Delete?");
     	alert.setHeaderText("Caution");
     	alert.setContentText("Are you sure you want to erase this client?");
     	Optional<ButtonType> result= alert.showAndWait();
@@ -195,7 +198,7 @@ public class SampleController implements Initializable{
     		int index = clientsTable.getSelectionModel().getSelectedIndex();
         	if(index>=0) {
         		clientsTable.getItems().remove(index);
-        		//remove client with id of index + 1 from database
+        		deleteFromSQL(establishedConnection(), index);
         	}
     	}
     }
@@ -212,6 +215,7 @@ public class SampleController implements Initializable{
         	while(clientsTable.getItems().size()>0) {
         		clientsTable.getItems().remove(0);
         	}
+        	deleteAllFromSQL(establishedConnection());
     	}
     }
     
@@ -252,6 +256,69 @@ public class SampleController implements Initializable{
     		alert.show();
     	}
     	//System.out.println("Insert into Bank_Clients (firstName, lastName, age, moneyInvested, networth, riskLevel)" + "VALUES ('" + client.getName() + "','" + client.getLastName() + "','" + Integer.toString(client.getAge()) + "','" + Long.toString(client.getMoney()) + "','" + Long.toString(client.getNetworth()) + "','" + client.getRiskLevel() +"')");
+    }
+    
+    public void modifyOnSQL(Connection connection, Client client, int index) {
+    	if(connection != null) {
+    		try {
+    			Statement statement = connection.createStatement();
+    			statement.executeUpdate("Update Bank_Clients set firstName='" + client.getName() + "',lastName='" + client.getLastName() + "',age='" + Integer.toString(client.getAge()) + "',moneyInvested='" + Long.toString(client.getMoney())  + "',networth='" + Long.toString(client.getNetworth()) + "',riskLevel='" + client.getRiskLevel() + "' where id=" + Integer.toString(index));
+    			connection.close();
+    		}catch (Exception e) {
+    			Alert alert = new Alert(AlertType.ERROR);
+    			alert.setHeaderText("ERROR");
+    			alert.setTitle("Caution");
+    			alert.setContentText("Unable to save data");
+    			alert.show();
+    		}
+    	}else {
+    		Alert alert = new Alert(AlertType.ERROR);
+			alert.setHeaderText("ERROR");
+    		alert.setContentText("Unable to modify data in server.\nPlease restart the application.");
+    		alert.show();
+    	}
+    }
+    
+    public void deleteFromSQL(Connection connection, int index) {
+    	if(connection != null) {
+    		try {
+    			Statement statement = connection.createStatement();
+    			statement.executeUpdate("Delete from Bank_Clients where id=" + Integer.toString(index+1));
+    			connection.close();
+    		}catch (Exception e) {
+    			Alert alert = new Alert(AlertType.ERROR);
+    			alert.setHeaderText("ERROR");
+    			alert.setContentText("Unable to delete data from server.\nPlease restart the application.");
+    			alert.show();
+    		}
+    	}else {
+    		Alert alert = new Alert(AlertType.ERROR);
+			alert.setHeaderText("ERROR");
+    		alert.setTitle("Caution");
+    		alert.setContentText("Unable to establish a connection with the server");
+    		alert.show();
+    	}
+    }
+    
+    public void deleteAllFromSQL(Connection connection) {
+    	if(connection != null) {
+    		try {
+    			Statement statement = connection.createStatement();
+    			statement.executeUpdate("Delete from Bank_Clients");
+    			connection.close();
+    		}catch (Exception e) {
+    			Alert alert = new Alert(AlertType.ERROR);
+    			alert.setHeaderText("ERROR");
+    			alert.setContentText("Unable to delete data from server.\nPlease restart the application.");
+    			alert.show();
+    		}
+    	}else {
+    		Alert alert = new Alert(AlertType.ERROR);
+			alert.setHeaderText("ERROR");
+    		alert.setTitle("Caution");
+    		alert.setContentText("Unable to establish a connection with the server");
+    		alert.show();
+    	}
     }
     
     public void loadDataFromSQL(Connection connection) {
@@ -297,13 +364,14 @@ public class SampleController implements Initializable{
 		networthColumn.setCellValueFactory(new PropertyValueFactory<>("networth"));
 		riskColumn.setCellValueFactory(new PropertyValueFactory<>("riskLevel"));
 		
-		modifyBtn.setDisable(true);
-		eraseBtn.setDisable(true);
-		restartBtn.setDisable(true);
-		
 		loadDataFromSQL(establishedConnection());
-		
 		clientsTable.setItems(clientData);
+		
+		if(clientData.size()<1) {
+			modifyBtn.setDisable(true);
+			eraseBtn.setDisable(true);
+			restartBtn.setDisable(true);
+		}
 		
 		showClient(null);
 		
