@@ -182,7 +182,7 @@ public class SampleController implements Initializable{
     	tmp.setNetworth(Long.parseLong(networthBox.getText()));
     	tmp.setRiskLevel(riskLevelCBO.getValue());
     	
-    	modifyOnSQL(establishedConnection(), tmp, ((clientsTable.getSelectionModel().getSelectedIndex())+1));
+    	modifyOnSQL(establishedConnection(), tmp);
     	
     	clientsTable.refresh();
     }
@@ -197,8 +197,8 @@ public class SampleController implements Initializable{
     	if(result.get() == ButtonType.OK) {
     		int index = clientsTable.getSelectionModel().getSelectedIndex();
         	if(index>=0) {
+        		deleteFromSQL(establishedConnection(), clientsTable.getSelectionModel().getSelectedItem());
         		clientsTable.getItems().remove(index);
-        		deleteFromSQL(establishedConnection(), index);
         	}
     	}
     }
@@ -240,6 +240,16 @@ public class SampleController implements Initializable{
     		try {
     			Statement statement = connection.createStatement();
     			statement.executeUpdate("Insert into Bank_Clients (firstName, lastName, age, moneyInvested, networth, riskLevel)" + "VALUES ('" + client.getName() + "','" + client.getLastName() + "','" + Integer.toString(client.getAge()) + "','" + Long.toString(client.getMoney()) + "','" + Long.toString(client.getNetworth()) + "','" + client.getRiskLevel() +"')");
+    			
+    			PreparedStatement statement1 = connection.prepareStatement("select * from Bank_Clients");
+    			ResultSet result = statement1.executeQuery();
+    			int id=1;
+    			while(result.next()) {
+    				if(Integer.parseInt(result.getString("id"))>id) {
+    					id=Integer.parseInt(result.getString("id"));
+    				}
+    			}
+    			client.setId(id);
     			connection.close();
     		}catch (Exception e) {
     			Alert alert = new Alert(AlertType.ERROR);
@@ -258,12 +268,11 @@ public class SampleController implements Initializable{
     	//System.out.println("Insert into Bank_Clients (firstName, lastName, age, moneyInvested, networth, riskLevel)" + "VALUES ('" + client.getName() + "','" + client.getLastName() + "','" + Integer.toString(client.getAge()) + "','" + Long.toString(client.getMoney()) + "','" + Long.toString(client.getNetworth()) + "','" + client.getRiskLevel() +"')");
     }
     
-    public void modifyOnSQL(Connection connection, Client client, int index) {
+    public void modifyOnSQL(Connection connection, Client client) {
     	if(connection != null) {
     		try {
     			Statement statement = connection.createStatement();
-    			statement.executeUpdate("Update Bank_Clients set firstName='" + client.getName() + "',lastName='" + client.getLastName() + "',age='" + Integer.toString(client.getAge()) + "',moneyInvested='" + Long.toString(client.getMoney())  + "',networth='" + Long.toString(client.getNetworth()) + "',riskLevel='" + client.getRiskLevel() + "' where id=" + Integer.toString(index));
-    			connection.close();
+    			statement.executeUpdate("Update Bank_Clients set firstName='" + client.getName() + "',lastName='" + client.getLastName() + "',age='" + Integer.toString(client.getAge()) + "',moneyInvested='" + Long.toString(client.getMoney())  + "',networth='" + Long.toString(client.getNetworth()) + "',riskLevel='" + client.getRiskLevel() + "' where id=" + client.getId());
     		}catch (Exception e) {
     			Alert alert = new Alert(AlertType.ERROR);
     			alert.setHeaderText("ERROR");
@@ -279,11 +288,11 @@ public class SampleController implements Initializable{
     	}
     }
     
-    public void deleteFromSQL(Connection connection, int index) {
+    public void deleteFromSQL(Connection connection, Client client) {
     	if(connection != null) {
     		try {
     			Statement statement = connection.createStatement();
-    			statement.executeUpdate("Delete from Bank_Clients where id=" + Integer.toString(index+1));
+    			statement.executeUpdate("Delete from Bank_Clients where id=" + Integer.toString(client.getId()));
     			connection.close();
     		}catch (Exception e) {
     			Alert alert = new Alert(AlertType.ERROR);
@@ -328,6 +337,7 @@ public class SampleController implements Initializable{
     			ResultSet result = statement.executeQuery();
     			while(result.next()) {
     				Client tmp = new Client(result.getString("firstName"), result.getString("lastName"));
+    				tmp.setId(Integer.parseInt(result.getString("id")));
     				tmp.setAge(Integer.parseInt(result.getString("age")));    
     				tmp.setMoney(Long.parseLong(result.getString("moneyInvested")));
     				tmp.setNetworth(Long.parseLong(result.getString("networth")));
